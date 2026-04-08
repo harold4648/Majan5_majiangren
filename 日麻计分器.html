@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mahjong Cash-Out Ledger</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --border: #ddd;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        /* Reduced outer padding for mobile */
+        body { background-color: var(--bg-color); color: var(--primary); margin: 0; padding: 6px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 1.4rem; margin-bottom: 15px; margin-top: 10px; }
+        
+        /* Reduced card padding to maximize horizontal space */
+        .card { background: var(--card-bg); border-radius: 8px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; margin-bottom: 12px; }
+        
+        /* Reduced gap between columns */
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        
+        /* Optimized input fields to fit 5 digits */
+        input[type="text"], input[type="number"] { 
+            width: 100%; 
+            padding: 8px 2px; /* Minimal side padding */
+            border: 1px solid var(--border); 
+            border-radius: 4px; 
+            font-size: 0.95rem; 
+            text-align: center; /* Centering helps visibility */
+        }
+        .player-names input { font-weight: bold; }
+        
+        .round { border: 1px solid var(--border); padding: 8px; border-radius: 6px; margin-bottom: 12px; background-color: #fafafa; }
+        .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; }
+        .round label { text-align: center; display: block; font-size: 0.75rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .warning { color: var(--danger); font-size: 0.8rem; }
+        .valid { color: var(--success); font-size: 0.8rem; }
+        
+        button { background-color: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        button:active { background-color: #2980b9; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+        th { background-color: var(--bg-color); font-size: 0.9rem; }
+        .total-row { font-weight: bold; font-size: 1.1rem; background-color: #e8f4f8; }
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Mahjong Cash-Out Ledger</h1>
+
+    <div class="card">
+        <h2>Players</h2>
+        <div class="grid-4 player-names" id="playerNames">
+            <input type="text" value="東位" id="name0" onchange="updateUI()">
+            <input type="text" value="南位" id="name1" onchange="updateUI()">
+            <input type="text" value="西位" id="name2" onchange="updateUI()">
+            <input type="text" value="北位" id="name3" onchange="updateUI()">
+        </div>
+    </div>
+
+    <div class="card" id="roundsContainer">
+        <h2>Rounds</h2>
+        <div id="roundsList"></div>
+        <button onclick="addRound()">+ Add New Round</button>
+    </div>
+
+    <div class="card">
+        <h2>Final Settlement</h2>
+        <table id="settlementTable">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Total Cashout</th>
+                </tr>
+            </thead>
+            <tbody id="settlementBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const BASE_SCORE = 25000;
+    const DIVISOR = 50;
+    const BONUSES = [800, 400, -200, -1000];
+    let rounds = [];
+
+    function addRound() {
+        rounds.push([25000, 25000, 25000, 25000]);
+        updateUI();
+    }
+
+    function updateScore(roundIndex, playerIndex, value) {
+        rounds[roundIndex][playerIndex] = parseInt(value) || 0;
+        updateUI();
+    }
+
+    function calculateRoundCashouts(scores) {
+        let indexedScores = scores.map((score, index) => ({ score, index }));
+        indexedScores.sort((a, b) => b.score - a.score);
+
+        let cashouts = [0, 0, 0, 0];
+        let i = 0;
+        
+        while (i < 4) {
+            let j = i;
+            while (j < 4 && indexedScores[j].score === indexedScores[i].score) {
+                j++;
+            }
+            let tieCount = j - i;
+            let sumBonus = 0;
+            for (let k = i; k < j; k++) {
+                sumBonus += BONUSES[k];
+            }
+            let avgBonus = sumBonus / tieCount;
+
+            for (let k = i; k < j; k++) {
+                let originalIndex = indexedScores[k].index;
+                let basePoints = (indexedScores[k].score - BASE_SCORE) / DIVISOR;
+                cashouts[originalIndex] = basePoints + avgBonus;
+            }
+            i = j;
+        }
+        return cashouts;
+    }
+
+    function updateUI() {
+        const names = [
+            document.getElementById('name0').value,
+            document.getElementById('name1').value,
+            document.getElementById('name2').value,
+            document.getElementById('name3').value
+        ];
+
+        const roundsList = document.getElementById('roundsList');
+        roundsList.innerHTML = '';
+        
+        let grandTotals = [0, 0, 0, 0];
+
+        rounds.forEach((scores, roundIndex) => {
+            let sum = scores.reduce((a, b) => a + b, 0);
+            let isValid = sum === 100000;
+            let statusText = isValid ? `<span class="valid">Sum: ${sum} ✓</span>` : `<span class="warning">Sum: ${sum} ⚠</span>`;
+
+            let cashouts = isValid ? calculateRoundCashouts(scores) : [0, 0, 0, 0];
+            if (isValid) {
+                for (let i=0; i<4; i++) grandTotals[i] += cashouts[i];
+            }
+
+            let roundHtml = `
+                <div class="round">
+                    <div class="round-header">
+                        <span>Round ${roundIndex + 1}</span>
+                        ${statusText}
+                    </div>
+                    <div class="grid-4">
+                        ${scores.map((score, pIndex) => `
+                            <div>
+                                <label>${names[pIndex]}</label>
+                                <input type="number" step="100" value="${score}" 
+                                    onchange="updateScore(${roundIndex}, ${pIndex}, this.value)">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            roundsList.innerHTML += roundHtml;
+        });
+
+        const tbody = document.getElementById('settlementBody');
+        tbody.innerHTML = '';
+        let totalSystemCash = 0;
+
+        for (let i = 0; i < 4; i++) {
+            let val = grandTotals[i];
+            totalSystemCash += val;
+            let colorClass = val > 0 ? 'positive' : (val < 0 ? 'negative' : '');
+            let sign = val > 0 ? '+' : '';
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td style="font-weight: bold;">${names[i]}</td>
+                    <td class="total-row ${colorClass}">${sign}${val.toFixed(1)}</td>
+                </tr>
+            `;
+        }
+    }
+
+    // Initialize with one round
+    addRound();
+</script>
+
+</body>
+</html>
