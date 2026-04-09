@@ -16,38 +16,42 @@
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        /* Reduced outer padding for mobile */
         body { background-color: var(--bg-color); color: var(--primary); margin: 0; padding: 6px; }
         .container { max-width: 600px; margin: 0 auto; }
         h1 { text-align: center; font-size: 1.4rem; margin-bottom: 15px; margin-top: 10px; }
         
-        /* Reduced card padding to maximize horizontal space */
         .card { background: var(--card-bg); border-radius: 8px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; margin-bottom: 12px; }
         
-        /* Reduced gap between columns */
-        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; margin-bottom: 12px; }
+        .card-header h2 { font-size: 1.1rem; margin: 0; }
+        .add-btn-small { background-color: var(--success); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
         
-        /* Optimized input fields to fit 5 digits */
-        input[type="text"], input[type="number"] { 
+        /* Changed to a 4-column grid so 4 players stay on the same row */
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 5px; }
+        
+        .flex-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .flex-row select { flex: 1; font-weight: bold; }
+        .flex-row input { flex: 1.5; }
+        
+        /* Reduced padding and slightly reduced font size to make cells shorter and fit 4 columns */
+        input[type="text"], input[type="number"], select { 
             width: 100%; 
-            padding: 8px 2px; /* Minimal side padding */
+            padding: 6px 2px; 
             border: 1px solid var(--border); 
             border-radius: 4px; 
-            font-size: 0.95rem; 
-            text-align: center; /* Centering helps visibility */
+            font-size: 0.9rem; 
+            text-align: center; 
+            background-color: white;
         }
-        .player-names input { font-weight: bold; }
         
-        .round { border: 1px solid var(--border); padding: 8px; border-radius: 6px; margin-bottom: 12px; background-color: #fafafa; }
-        .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; }
-        .round label { text-align: center; display: block; font-size: 0.75rem; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .round { border: 1px solid var(--border); padding: 10px 8px 2px 8px; border-radius: 6px; margin-bottom: 12px; background-color: #fafafa; }
+        .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; font-size: 0.95rem; }
         
         .warning { color: var(--danger); font-size: 0.8rem; }
         .valid { color: var(--success); font-size: 0.8rem; }
         
-        button { background-color: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
-        button:active { background-color: #2980b9; }
+        .btn-large { background-color: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-large:active { background-color: #2980b9; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
@@ -63,19 +67,18 @@
     <h1>Mahjong Cash-Out Ledger</h1>
 
     <div class="card">
-        <h2>Players</h2>
-        <div class="grid-4 player-names" id="playerNames">
-            <input type="text" value="東位" id="name0" onchange="updateUI()">
-            <input type="text" value="南位" id="name1" onchange="updateUI()">
-            <input type="text" value="西位" id="name2" onchange="updateUI()">
-            <input type="text" value="北位" id="name3" onchange="updateUI()">
+        <div class="card-header">
+            <h2>Player Roster</h2>
+            <button class="add-btn-small" onclick="addPlayer()">+</button>
         </div>
+        <div class="grid-4" id="playerNames">
+            </div>
     </div>
 
     <div class="card" id="roundsContainer">
         <h2>Rounds</h2>
         <div id="roundsList"></div>
-        <button onclick="addRound()">+ Add New Round</button>
+        <button class="btn-large" onclick="addRound()">+ Add New Round</button>
     </div>
 
     <div class="card">
@@ -97,69 +100,125 @@
     const BASE_SCORE = 25000;
     const DIVISOR = 50;
     const BONUSES = [800, 400, -200, -1000];
+    
+    // Initial global roster
+    let players = ["老人", "乃哥", "魔虹", "提姆"];
+    
+    // Rounds data: array of arrays of 4 slots. Each slot is { p: playerIndex, s: score }
     let rounds = [];
 
+    // Dynamically render the roster inputs
+    function renderPlayers() {
+        const container = document.getElementById('playerNames');
+        container.innerHTML = '';
+        players.forEach((name, i) => {
+            container.innerHTML += `<input type="text" value="${name}" onchange="updatePlayerName(${i}, this.value)">`;
+        });
+        updateUI();
+    }
+
+    function addPlayer() {
+        // Automatically add "狗德" for the 5th player, otherwise use generic name
+        if (players.length === 4) {
+            players.push("狗德");
+        } else {
+            players.push(`玩家 ${players.length + 1}`);
+        }
+        renderPlayers();
+    }
+
+    function updatePlayerName(index, newName) {
+        players[index] = newName;
+        updateUI();
+    }
+
     function addRound() {
-        rounds.push([25000, 25000, 25000, 25000]);
+        // Automatically assign the first 4 available players
+        let defaultPlayers = [0, 1, 2, 3].map(i => i < players.length ? i : 0);
+        rounds.push([
+            {p: defaultPlayers[0], s: 25000}, 
+            {p: defaultPlayers[1], s: 25000}, 
+            {p: defaultPlayers[2], s: 25000}, 
+            {p: defaultPlayers[3], s: 25000}
+        ]);
         updateUI();
     }
 
-    function updateScore(roundIndex, playerIndex, value) {
-        rounds[roundIndex][playerIndex] = parseInt(value) || 0;
+    function updateSlotPlayer(roundIndex, slotIndex, playerIndex) {
+        rounds[roundIndex][slotIndex].p = parseInt(playerIndex);
         updateUI();
     }
 
-    function calculateRoundCashouts(scores) {
-        let indexedScores = scores.map((score, index) => ({ score, index }));
-        indexedScores.sort((a, b) => b.score - a.score);
+    function updateSlotScore(roundIndex, slotIndex, value) {
+        rounds[roundIndex][slotIndex].s = parseInt(value) || 0;
+        updateUI();
+    }
 
-        let cashouts = [0, 0, 0, 0];
+    function calculateRoundCashouts(roundData) {
+        let sorted = [...roundData].sort((a, b) => b.s - a.s);
+        let cashouts = {};
+
         let i = 0;
-        
         while (i < 4) {
             let j = i;
-            while (j < 4 && indexedScores[j].score === indexedScores[i].score) {
-                j++;
-            }
+            while (j < 4 && sorted[j].s === sorted[i].s) j++;
+            
             let tieCount = j - i;
             let sumBonus = 0;
-            for (let k = i; k < j; k++) {
-                sumBonus += BONUSES[k];
-            }
+            for (let k = i; k < j; k++) sumBonus += BONUSES[k];
             let avgBonus = sumBonus / tieCount;
 
             for (let k = i; k < j; k++) {
-                let originalIndex = indexedScores[k].index;
-                let basePoints = (indexedScores[k].score - BASE_SCORE) / DIVISOR;
-                cashouts[originalIndex] = basePoints + avgBonus;
+                let basePoints = (sorted[k].s - BASE_SCORE) / DIVISOR;
+                cashouts[sorted[k].p] = basePoints + avgBonus;
             }
             i = j;
         }
-        return cashouts;
+        return cashouts; 
     }
 
     function updateUI() {
-        const names = [
-            document.getElementById('name0').value,
-            document.getElementById('name1').value,
-            document.getElementById('name2').value,
-            document.getElementById('name3').value
-        ];
-
         const roundsList = document.getElementById('roundsList');
         roundsList.innerHTML = '';
         
-        let grandTotals = [0, 0, 0, 0];
+        let grandTotals = new Array(players.length).fill(0);
 
-        rounds.forEach((scores, roundIndex) => {
-            let sum = scores.reduce((a, b) => a + b, 0);
-            let isValid = sum === 100000;
-            let statusText = isValid ? `<span class="valid">Sum: ${sum} ✓</span>` : `<span class="warning">Sum: ${sum} ⚠</span>`;
-
-            let cashouts = isValid ? calculateRoundCashouts(scores) : [0, 0, 0, 0];
+        rounds.forEach((roundData, roundIndex) => {
+            let sum = roundData.reduce((acc, curr) => acc + curr.s, 0);
+            let activePlayers = new Set(roundData.map(r => r.p));
+            
+            let isSumValid = sum === 100000;
+            let isPlayersValid = activePlayers.size === 4;
+            let isValid = isSumValid && isPlayersValid;
+            
+            let statusText = '';
             if (isValid) {
-                for (let i=0; i<4; i++) grandTotals[i] += cashouts[i];
+                statusText = `<span class="valid">Sum: 100,000 ✓</span>`;
+                let roundCashouts = calculateRoundCashouts(roundData);
+                for(let pIndex in roundCashouts) {
+                    grandTotals[pIndex] += roundCashouts[pIndex];
+                }
+            } else if (!isPlayersValid) {
+                statusText = `<span class="warning">⚠ Duplicate Players</span>`;
+            } else {
+                statusText = `<span class="warning">Sum: ${sum} ⚠</span>`;
             }
+
+            let slotsHtml = roundData.map((slotData, slotIndex) => {
+                let optionsHtml = players.map((name, i) => 
+                    `<option value="${i}" ${slotData.p === i ? 'selected' : ''}>${name}</option>`
+                ).join('');
+                
+                return `
+                    <div class="flex-row">
+                        <select onchange="updateSlotPlayer(${roundIndex}, ${slotIndex}, this.value)">
+                            ${optionsHtml}
+                        </select>
+                        <input type="number" step="100" inputmode="numeric" value="${slotData.s}" 
+                            onchange="updateSlotScore(${roundIndex}, ${slotIndex}, this.value)">
+                    </div>
+                `;
+            }).join('');
 
             let roundHtml = `
                 <div class="round">
@@ -167,40 +226,36 @@
                         <span>Round ${roundIndex + 1}</span>
                         ${statusText}
                     </div>
-                    <div class="grid-4">
-                        ${scores.map((score, pIndex) => `
-                            <div>
-                                <label>${names[pIndex]}</label>
-                                <input type="number" step="100" value="${score}" 
-                                    onchange="updateScore(${roundIndex}, ${pIndex}, this.value)">
-                            </div>
-                        `).join('')}
-                    </div>
+                    <div>${slotsHtml}</div>
                 </div>
             `;
             roundsList.innerHTML += roundHtml;
         });
 
+        // Settlement Table
         const tbody = document.getElementById('settlementBody');
         tbody.innerHTML = '';
-        let totalSystemCash = 0;
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < players.length; i++) {
             let val = grandTotals[i];
-            totalSystemCash += val;
-            let colorClass = val > 0 ? 'positive' : (val < 0 ? 'negative' : '');
-            let sign = val > 0 ? '+' : '';
+            let participated = rounds.some(r => r.some(slot => slot.p === i));
             
-            tbody.innerHTML += `
-                <tr>
-                    <td style="font-weight: bold;">${names[i]}</td>
-                    <td class="total-row ${colorClass}">${sign}${val.toFixed(1)}</td>
-                </tr>
-            `;
+            if (participated || val !== 0) {
+                let colorClass = val > 0 ? 'positive' : (val < 0 ? 'negative' : '');
+                let sign = val > 0 ? '+' : '';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: bold;">${players[i]}</td>
+                        <td class="total-row ${colorClass}">${sign}${val.toFixed(1)}</td>
+                    </tr>
+                `;
+            }
         }
     }
 
-    // Initialize with one round
+    // Initialize app
+    renderPlayers();
     addRound();
 </script>
 
