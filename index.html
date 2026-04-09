@@ -104,7 +104,7 @@
     const DIVISOR = 50;
     const BONUSES = [800, 400, -200, -1000];
     
-    let players = ["老人", "乃哥", "魔虹", "提姆"];
+    let players = ["老人", "乃哥", "魔魟", "提姆"];
     let rounds = [];
 
     // --- LOCAL STORAGE FUNCTIONS ---
@@ -120,7 +120,7 @@
         const savedData = localStorage.getItem('mahjongLedgerData');
         if (savedData) {
             const parsedData = JSON.parse(savedData);
-            players = parsedData.players || ["老人", "乃哥", "魔虹", "提姆"];
+            players = parsedData.players || ["老人", "乃哥", "魔魟", "提姆"];
             rounds = parsedData.rounds || [];
             renderPlayers();
             updateUI(); // Will re-render rounds and table
@@ -134,7 +134,7 @@
     function resetGame() {
         if (confirm("Are you sure you want to clear all scores and start a new game?")) {
             localStorage.removeItem('mahjongLedgerData');
-            players = ["老人", "乃哥", "魔虹", "提姆"];
+            players = ["老人", "乃哥", "魔魟", "提姆"];
             rounds = [];
             renderPlayers();
             addRound();
