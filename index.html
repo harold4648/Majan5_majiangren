@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mahjong Cash-Out Ledger</title>
+    <title>日麻計分器</title>
     <style>
         :root {
             --bg-color: #f4f4f9;
@@ -26,14 +26,12 @@
         .card-header h2 { font-size: 1.1rem; margin: 0; }
         .add-btn-small { background-color: var(--success); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
         
-        /* Changed to a 4-column grid so 4 players stay on the same row */
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 5px; }
         
         .flex-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .flex-row select { flex: 1; font-weight: bold; }
         .flex-row input { flex: 1.5; }
         
-        /* Reduced padding and slightly reduced font size to make cells shorter and fit 4 columns */
         input[type="text"], input[type="number"], select { 
             width: 100%; 
             padding: 6px 2px; 
@@ -52,6 +50,9 @@
         
         .btn-large { background-color: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         .btn-large:active { background-color: #2980b9; }
+
+        .btn-danger { background-color: white; color: var(--danger); border: 2px solid var(--danger); padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 25px; }
+        .btn-danger:active { background-color: #ffeaea; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
@@ -64,11 +65,11 @@
 <body>
 
 <div class="container">
-    <h1>Mahjong Cash-Out Ledger</h1>
+    <h1>日麻計分器</h1>
 
     <div class="card">
         <div class="card-header">
-            <h2>Player Roster</h2>
+            <h2>玩家</h2>
             <button class="add-btn-small" onclick="addPlayer()">+</button>
         </div>
         <div class="grid-4" id="playerNames">
@@ -76,24 +77,26 @@
     </div>
 
     <div class="card" id="roundsContainer">
-        <h2>Rounds</h2>
+        <h2>場次</h2>
         <div id="roundsList"></div>
         <button class="btn-large" onclick="addRound()">+ Add New Round</button>
     </div>
 
     <div class="card">
-        <h2>Final Settlement</h2>
+        <h2>最终計分</h2>
         <table id="settlementTable">
             <thead>
                 <tr>
-                    <th>Player</th>
-                    <th>Total Cashout</th>
+                    <th>玩家</th>
+                    <th>輸贏</th>
                 </tr>
             </thead>
             <tbody id="settlementBody">
                 </tbody>
         </table>
     </div>
+
+    <button class="btn-danger" onclick="resetGame()">🗑️ Reset Game Data</button>
 </div>
 
 <script>
@@ -101,13 +104,44 @@
     const DIVISOR = 50;
     const BONUSES = [800, 400, -200, -1000];
     
-    // Initial global roster
     let players = ["老人", "乃哥", "魔虹", "提姆"];
-    
-    // Rounds data: array of arrays of 4 slots. Each slot is { p: playerIndex, s: score }
     let rounds = [];
 
-    // Dynamically render the roster inputs
+    // --- LOCAL STORAGE FUNCTIONS ---
+    function saveData() {
+        const dataToSave = {
+            players: players,
+            rounds: rounds
+        };
+        localStorage.setItem('mahjongLedgerData', JSON.stringify(dataToSave));
+    }
+
+    function loadData() {
+        const savedData = localStorage.getItem('mahjongLedgerData');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            players = parsedData.players || ["老人", "乃哥", "魔虹", "提姆"];
+            rounds = parsedData.rounds || [];
+            renderPlayers();
+            updateUI(); // Will re-render rounds and table
+        } else {
+            // First time opening the app
+            renderPlayers();
+            addRound(); 
+        }
+    }
+
+    function resetGame() {
+        if (confirm("Are you sure you want to clear all scores and start a new game?")) {
+            localStorage.removeItem('mahjongLedgerData');
+            players = ["老人", "乃哥", "魔虹", "提姆"];
+            rounds = [];
+            renderPlayers();
+            addRound();
+        }
+    }
+    // --------------------------------
+
     function renderPlayers() {
         const container = document.getElementById('playerNames');
         container.innerHTML = '';
@@ -118,22 +152,22 @@
     }
 
     function addPlayer() {
-        // Automatically add "狗德" for the 5th player, otherwise use generic name
         if (players.length === 4) {
             players.push("狗德");
         } else {
             players.push(`玩家 ${players.length + 1}`);
         }
         renderPlayers();
+        saveData();
     }
 
     function updatePlayerName(index, newName) {
         players[index] = newName;
         updateUI();
+        saveData();
     }
 
     function addRound() {
-        // Automatically assign the first 4 available players
         let defaultPlayers = [0, 1, 2, 3].map(i => i < players.length ? i : 0);
         rounds.push([
             {p: defaultPlayers[0], s: 25000}, 
@@ -142,16 +176,19 @@
             {p: defaultPlayers[3], s: 25000}
         ]);
         updateUI();
+        saveData();
     }
 
     function updateSlotPlayer(roundIndex, slotIndex, playerIndex) {
         rounds[roundIndex][slotIndex].p = parseInt(playerIndex);
         updateUI();
+        saveData();
     }
 
     function updateSlotScore(roundIndex, slotIndex, value) {
         rounds[roundIndex][slotIndex].s = parseInt(value) || 0;
         updateUI();
+        saveData();
     }
 
     function calculateRoundCashouts(roundData) {
@@ -232,7 +269,6 @@
             roundsList.innerHTML += roundHtml;
         });
 
-        // Settlement Table
         const tbody = document.getElementById('settlementBody');
         tbody.innerHTML = '';
 
@@ -252,11 +288,13 @@
                 `;
             }
         }
+        
+        // Save state at the end of every UI update
+        saveData();
     }
 
-    // Initialize app
-    renderPlayers();
-    addRound();
+    // Initialize app by loading from storage
+    loadData();
 </script>
 
 </body>
