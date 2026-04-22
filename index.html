@@ -80,7 +80,7 @@
 
 <script>
     const BASE_SCORE = 25000, DIVISOR = 50, BONUSES = [800, 400, -200, -1000];
-    let players = ["老人", "乃哥", "魔虹", "提姆"];
+    let players = ["老人", "乃哥", "魔魟", "提姆"];
     let rounds = [], historicalScores = [], currentGrandTotals = [];
 
     function saveData() { localStorage.setItem('mahjongLedgerData', JSON.stringify({players, rounds, historicalScores})); }
@@ -92,39 +92,57 @@
     function resetGame() {
         if (confirm("確定要清除所有紀錄並重置到初始狀態嗎？")) {
             localStorage.removeItem('mahjongLedgerData');
-            players = ["老人", "乃哥", "魔虹", "提姆"]; rounds = []; historicalScores = [0, 0, 0, 0];
+            players = ["老人", "乃哥", "魔魟", "提姆"]; rounds = []; historicalScores = [0, 0, 0, 0];
             renderPlayers(); addRound(); updateUI();
         }
     }
     
-    // 複製與載入功能 (改為純整數邏輯)
+    // 排序與複製功能
     function copySettlement() {
-        let text = "【日麻歷史總帳】\n";
+        let results = [];
         for(let i=0; i<players.length; i++) {
             let sessionVal = currentGrandTotals[i] || 0;
             let histScore = historicalScores[i] || 0;
             if (rounds.some(r => r.some(s => s.p === i)) || sessionVal !== 0 || histScore !== 0) {
-                text += `${players[i]}: ${Math.round(sessionVal + histScore)}\n`;
+                results.push({ name: players[i], score: Math.round(sessionVal + histScore) });
             }
         }
-        navigator.clipboard.writeText(text).then(() => alert("✅ 已複製最新帳本！請直接貼上至群組。"));
+        
+        // 依照分數由高到低排序
+        results.sort((a, b) => b.score - a.score);
+        
+        let text = "【日麻歷史總帳】\n";
+        results.forEach(r => {
+            text += `${r.name}: ${r.score}\n`;
+        });
+        
+        navigator.clipboard.writeText(text).then(() => alert("✅ 已複製最新帳本（依分數高低排序）！請直接貼上至群組。"));
     }
     
+    // 強化的載入功能（解決手機換行變空白的問題）
     function importHistory() {
-        let text = prompt("請貼上群組的歷史總帳文字：\n(格式如「老人: 150」或「乃哥: -20」)");
+        let text = prompt("請貼上群組的歷史總帳文字：");
         if(!text) return;
-        let lines = text.split('\n'), newPlayers = [], newHistory = [];
-        lines.forEach(line => {
-            // 正規表達式調整為只抓取整數
-            let match = line.match(/^\s*(.*?)\s*[:：]\s*([+-]?\d+)\s*$/);
-            if(match) { newPlayers.push(match[1].trim()); newHistory.push(parseInt(match[2], 10)); }
-        });
+        
+        // 清除標題，避免被干擾
+        text = text.replace(/【.*?】/g, ''); 
+        
+        let newPlayers = [], newHistory = [];
+        // 全域正則：尋找任意「非冒號/空白的字元」接著「冒號」接著「數字」
+        const regex = /([^:：\s]+)\s*[:：]\s*([+-]?\d+)/g;
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+            newPlayers.push(match[1].trim());
+            newHistory.push(parseInt(match[2], 10));
+        }
+        
         if(newPlayers.length > 0) {
             players = newPlayers; historicalScores = newHistory; rounds = [];
             addRound(); renderPlayers(); updateUI(); saveData();
             alert(`✅ 成功載入 ${players.length} 位玩家的紀錄！`);
         } else { 
-            alert("❌ 解析失敗，找不到相符的格式。"); 
+            alert("❌ 解析失敗，請確認貼上的文字格式。"); 
         }
     }
 
