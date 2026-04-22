@@ -19,6 +19,7 @@
         .flex-row select { flex: 1; font-weight: bold; }
         .input-container { flex: 1.5; display: flex; gap: 4px; }
         .btn-sign { background-color: #e8e8e8; border: 1px solid var(--border); border-radius: 4px; font-weight: bold; font-size: 1.1rem; padding: 0 10px; cursor: pointer; color: var(--primary); }
+        .btn-sign:active { background-color: #cccccc; }
         input[type="text"], input[type="number"], select { width: 100%; padding: 6px 2px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; text-align: center; background-color: white; }
         .round { border: 1px solid var(--border); padding: 10px 8px 2px 8px; border-radius: 6px; margin-bottom: 12px; background-color: #fafafa; }
         .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; font-size: 0.95rem; }
@@ -37,6 +38,7 @@
 <body>
 <div class="container">
     <h1>日麻計分器</h1>
+    
     <div class="card">
         <div class="card-header">
             <h2>玩家</h2>
@@ -44,11 +46,13 @@
         </div>
         <div class="grid-4" id="playerNames"></div>
     </div>
+    
     <div class="card" id="roundsContainer">
         <h2>場次</h2>
         <div id="roundsList"></div>
         <button class="btn-large" onclick="addRound()">+ Add New Round</button>
     </div>
+    
     <div class="card">
         <h2>本次最終計分</h2>
         <table id="settlementTable">
@@ -56,6 +60,7 @@
             <tbody id="settlementBody"></tbody>
         </table>
     </div>
+    
     <div class="card">
         <div class="card-header">
             <h2>歷史分數與結算</h2>
@@ -69,6 +74,7 @@
             <tbody id="historyBody"></tbody>
         </table>
     </div>
+    
     <button class="btn-danger" onclick="resetGame()">🗑️ 清空紀錄重置</button>
 </div>
 
@@ -91,33 +97,36 @@
         }
     }
     
-    // --- 閉環方案專用功能 ---
+    // 複製與載入功能 (改為純整數邏輯)
     function copySettlement() {
         let text = "【日麻歷史總帳】\n";
         for(let i=0; i<players.length; i++) {
             let sessionVal = currentGrandTotals[i] || 0;
             let histScore = historicalScores[i] || 0;
             if (rounds.some(r => r.some(s => s.p === i)) || sessionVal !== 0 || histScore !== 0) {
-                text += `${players[i]}: ${parseFloat((sessionVal + histScore).toFixed(1))}\n`;
+                text += `${players[i]}: ${Math.round(sessionVal + histScore)}\n`;
             }
         }
         navigator.clipboard.writeText(text).then(() => alert("✅ 已複製最新帳本！請直接貼上至群組。"));
     }
+    
     function importHistory() {
         let text = prompt("請貼上群組的歷史總帳文字：\n(格式如「老人: 150」或「乃哥: -20」)");
         if(!text) return;
         let lines = text.split('\n'), newPlayers = [], newHistory = [];
         lines.forEach(line => {
-            let match = line.match(/^\s*(.*?)\s*[:：]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
-            if(match) { newPlayers.push(match[1].trim()); newHistory.push(parseFloat(match[2])); }
+            // 正規表達式調整為只抓取整數
+            let match = line.match(/^\s*(.*?)\s*[:：]\s*([+-]?\d+)\s*$/);
+            if(match) { newPlayers.push(match[1].trim()); newHistory.push(parseInt(match[2], 10)); }
         });
         if(newPlayers.length > 0) {
             players = newPlayers; historicalScores = newHistory; rounds = [];
             addRound(); renderPlayers(); updateUI(); saveData();
             alert(`✅ 成功載入 ${players.length} 位玩家的紀錄！`);
-        } else { alert("❌ 解析失敗，找不到相符的格式。"); }
+        } else { 
+            alert("❌ 解析失敗，找不到相符的格式。"); 
+        }
     }
-    // ----------------------
 
     function renderPlayers() {
         const c = document.getElementById('playerNames'); c.innerHTML = '';
@@ -129,7 +138,7 @@
     function updateSlotPlayer(r, s, p) { rounds[r][s].p = parseInt(p); updateUI(); saveData(); }
     function updateSlotScore(r, s, v) { rounds[r][s].s = parseInt(v) || 0; updateUI(); saveData(); }
     function toggleSign(r, s) { rounds[r][s].s *= -1; updateUI(); saveData(); }
-    function updateHistoryScore(i, v) { historicalScores[i] = parseFloat(v) || 0; updateUI(); saveData(); }
+    function updateHistoryScore(i, v) { historicalScores[i] = parseInt(v, 10) || 0; updateUI(); saveData(); }
     function toggleHistorySign(i) { historicalScores[i] = (historicalScores[i] || 0) * -1; updateUI(); saveData(); }
 
     function calculateRoundCashouts(roundData) {
@@ -137,7 +146,7 @@
         while (i < 4) {
             let j = i; while (j < 4 && sorted[j].s === sorted[i].s) j++;
             let sumB = 0; for(let k=i; k<j; k++) sumB += BONUSES[k]; let avgB = sumB / (j-i);
-            for(let k=i; k<j; k++) cashouts[sorted[k].p] = ((sorted[k].s - BASE_SCORE) / DIVISOR) + avgB;
+            for(let k=i; k<j; k++) cashouts[sorted[k].p] = Math.round(((sorted[k].s - BASE_SCORE) / DIVISOR) + avgB);
             i = j;
         }
         return cashouts; 
@@ -146,15 +155,23 @@
     function updateUI() {
         document.getElementById('roundsList').innerHTML = '';
         currentGrandTotals = new Array(players.length).fill(0);
+        
         rounds.forEach((rd, rIdx) => {
             let sum = rd.reduce((a, c) => a + c.s, 0), isValid = sum === 100000 && new Set(rd.map(r=>r.p)).size === 4;
             let status = isValid ? `<span class="valid">Sum: 100k ✓</span>` : (sum===100000 ? `<span class="warning">⚠ 重複</span>` : `<span class="warning">Sum: ${sum} ⚠</span>`);
             if(isValid) { let cOuts = calculateRoundCashouts(rd); for(let p in cOuts) currentGrandTotals[p] += cOuts[p]; }
+            
             let slots = rd.map((s, sIdx) => `
                 <div class="flex-row">
-                    <select onchange="updateSlotPlayer(${rIdx}, ${sIdx}, this.value)">${players.map((n, i) => `<option value="${i}" ${s.p===i?'selected':''}>${n}</option>`).join('')}</select>
-                    <div class="input-container"><button class="btn-sign" onclick="toggleSign(${rIdx}, ${sIdx})">±</button><input type="number" step="100" value="${s.s}" onchange="updateSlotScore(${rIdx}, ${sIdx}, this.value)"></div>
+                    <select onchange="updateSlotPlayer(${rIdx}, ${sIdx}, this.value)">
+                        ${players.map((n, i) => `<option value="${i}" ${s.p===i?'selected':''}>${n}</option>`).join('')}
+                    </select>
+                    <div class="input-container">
+                        <button class="btn-sign" onclick="toggleSign(${rIdx}, ${sIdx})">±</button>
+                        <input type="number" step="100" inputmode="numeric" pattern="\\d*" value="${s.s}" onchange="updateSlotScore(${rIdx}, ${sIdx}, this.value)">
+                    </div>
                 </div>`).join('');
+                
             document.getElementById('roundsList').innerHTML += `<div class="round"><div class="round-header"><span>場次 ${rIdx + 1}</span>${status}</div><div>${slots}</div></div>`;
         });
 
@@ -162,10 +179,24 @@
         document.getElementById('historyBody').innerHTML = '';
         for (let i = 0; i < players.length; i++) {
             let sVal = currentGrandTotals[i], hVal = historicalScores[i] || 0, part = rounds.some(r => r.some(s => s.p === i));
-            if (part || sVal !== 0) document.getElementById('settlementBody').innerHTML += `<tr><td style="font-weight: bold;">${players[i]}</td><td class="total-row ${sVal>0?'positive':sVal<0?'negative':''}">${sVal>0?'+':''}${sVal.toFixed(1)}</td></tr>`;
+            
+            if (part || sVal !== 0) {
+                document.getElementById('settlementBody').innerHTML += `<tr><td style="font-weight: bold;">${players[i]}</td><td class="total-row ${sVal>0?'positive':sVal<0?'negative':''}">${sVal>0?'+':''}${sVal}</td></tr>`;
+            }
+            
             if (part || sVal !== 0 || hVal !== 0) {
                 let fBal = sVal + hVal;
-                document.getElementById('historyBody').innerHTML += `<tr><td style="font-weight:bold;vertical-align:middle;">${players[i]}</td><td><div class="input-container" style="justify-content:center;"><button class="btn-sign" onclick="toggleHistorySign(${i})">±</button><input type="number" step="0.1" value="${hVal}" onchange="updateHistoryScore(${i}, this.value)" style="min-width:0;"></div></td><td class="total-row ${fBal>0?'positive':fBal<0?'negative':''}" style="vertical-align:middle;">${fBal>0?'+':''}${fBal.toFixed(1)}</td></tr>`;
+                document.getElementById('historyBody').innerHTML += `
+                    <tr>
+                        <td style="font-weight:bold;vertical-align:middle;">${players[i]}</td>
+                        <td>
+                            <div class="input-container" style="justify-content:center;">
+                                <button class="btn-sign" onclick="toggleHistorySign(${i})">±</button>
+                                <input type="number" step="1" inputmode="numeric" pattern="\\d*" value="${hVal}" onchange="updateHistoryScore(${i}, this.value)" style="min-width:0;">
+                            </div>
+                        </td>
+                        <td class="total-row ${fBal>0?'positive':fBal<0?'negative':''}" style="vertical-align:middle;">${fBal>0?'+':''}${fBal}</td>
+                    </tr>`;
             }
         }
         saveData();
