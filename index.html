@@ -120,7 +120,7 @@
             }
         }
         results.sort((a, b) => b.score - a.score);
-        let text = "【日麻歷史總帳】\n";
+        let text = "【歷史總帳】\n";
         results.forEach(r => { text += `${r.name}: ${r.score}\n`; });
         navigator.clipboard.writeText(text).then(() => alert("✅ 已複製最新帳本（依分數高低排序）！"));
     }
