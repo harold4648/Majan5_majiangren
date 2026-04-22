@@ -5,55 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>日麻計分器</title>
     <style>
-        :root {
-            --bg-color: #f4f4f9;
-            --card-bg: #ffffff;
-            --primary: #2c3e50;
-            --accent: #3498db;
-            --danger: #e74c3c;
-            --success: #2ecc71;
-            --border: #ddd;
-        }
+        :root { --bg-color: #f4f4f9; --card-bg: #ffffff; --primary: #2c3e50; --accent: #3498db; --danger: #e74c3c; --success: #2ecc71; --border: #ddd; }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        
         body { background-color: var(--bg-color); color: var(--primary); margin: 0; padding: 6px; }
         .container { max-width: 600px; margin: 0 auto; }
         h1 { text-align: center; font-size: 1.4rem; margin-bottom: 15px; margin-top: 10px; }
-        
         .card { background: var(--card-bg); border-radius: 8px; padding: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        
         .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; margin-bottom: 12px; }
         .card-header h2 { font-size: 1.1rem; margin: 0; }
         .add-btn-small { background-color: var(--success); color: white; border: none; padding: 4px 12px; border-radius: 4px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
-        
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 5px; }
-        
-        .flex-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .flex-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: stretch; }
         .flex-row select { flex: 1; font-weight: bold; }
-        .flex-row input { flex: 1.5; }
-        
-        input[type="text"], input[type="number"], select { 
-            width: 100%; 
-            padding: 6px 2px; 
-            border: 1px solid var(--border); 
-            border-radius: 4px; 
-            font-size: 0.9rem; 
-            text-align: center; 
-            background-color: white;
-        }
-        
+        .input-container { flex: 1.5; display: flex; gap: 4px; }
+        .btn-sign { background-color: #e8e8e8; border: 1px solid var(--border); border-radius: 4px; font-weight: bold; font-size: 1.1rem; padding: 0 10px; cursor: pointer; color: var(--primary); }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 6px 2px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; text-align: center; background-color: white; }
         .round { border: 1px solid var(--border); padding: 10px 8px 2px 8px; border-radius: 6px; margin-bottom: 12px; background-color: #fafafa; }
         .round-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; font-size: 0.95rem; }
-        
         .warning { color: var(--danger); font-size: 0.8rem; }
         .valid { color: var(--success); font-size: 0.8rem; }
-        
         .btn-large { background-color: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
-        .btn-large:active { background-color: #2980b9; }
-
         .btn-danger { background-color: white; color: var(--danger); border: 2px solid var(--danger); padding: 12px; width: 100%; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 25px; }
-        .btn-danger:active { background-color: #ffeaea; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { text-align: center; padding: 10px 4px; border-bottom: 1px solid var(--border); }
         th { background-color: var(--bg-color); font-size: 0.9rem; }
@@ -63,239 +35,142 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1>日麻計分器</h1>
-
     <div class="card">
         <div class="card-header">
             <h2>玩家</h2>
             <button class="add-btn-small" onclick="addPlayer()">+</button>
         </div>
-        <div class="grid-4" id="playerNames">
-            </div>
+        <div class="grid-4" id="playerNames"></div>
     </div>
-
     <div class="card" id="roundsContainer">
         <h2>場次</h2>
         <div id="roundsList"></div>
         <button class="btn-large" onclick="addRound()">+ Add New Round</button>
     </div>
-
     <div class="card">
-        <h2>最终計分</h2>
+        <h2>本次最終計分</h2>
         <table id="settlementTable">
-            <thead>
-                <tr>
-                    <th>玩家</th>
-                    <th>輸贏</th>
-                </tr>
-            </thead>
-            <tbody id="settlementBody">
-                </tbody>
+            <thead><tr><th>玩家</th><th>輸贏</th></tr></thead>
+            <tbody id="settlementBody"></tbody>
         </table>
     </div>
-
-    <button class="btn-danger" onclick="resetGame()">🗑️ Reset Game Data</button>
+    <div class="card">
+        <div class="card-header">
+            <h2>歷史分數與結算</h2>
+            <div>
+                <button class="add-btn-small" style="background-color: var(--accent); font-size: 0.85rem;" onclick="importHistory()">📥 載入</button>
+                <button class="add-btn-small" style="background-color: var(--accent); font-size: 0.85rem;" onclick="copySettlement()">📋 複製</button>
+            </div>
+        </div>
+        <table id="historyTable">
+            <thead><tr><th style="width: 25%;">玩家</th><th style="width: 45%;">歷史分數</th><th style="width: 30%;">總額</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+    </div>
+    <button class="btn-danger" onclick="resetGame()">🗑️ 清空紀錄重置</button>
 </div>
 
 <script>
-    const BASE_SCORE = 25000;
-    const DIVISOR = 50;
-    const BONUSES = [800, 400, -200, -1000];
-    
-    let players = ["老人", "乃哥", "魔魟", "提姆"];
-    let rounds = [];
+    const BASE_SCORE = 25000, DIVISOR = 50, BONUSES = [800, 400, -200, -1000];
+    let players = ["老人", "乃哥", "魔虹", "提姆"];
+    let rounds = [], historicalScores = [], currentGrandTotals = [];
 
-    // --- LOCAL STORAGE FUNCTIONS ---
-    function saveData() {
-        const dataToSave = {
-            players: players,
-            rounds: rounds
-        };
-        localStorage.setItem('mahjongLedgerData', JSON.stringify(dataToSave));
-    }
-
+    function saveData() { localStorage.setItem('mahjongLedgerData', JSON.stringify({players, rounds, historicalScores})); }
     function loadData() {
-        const savedData = localStorage.getItem('mahjongLedgerData');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            players = parsedData.players || ["老人", "乃哥", "魔魟", "提姆"];
-            rounds = parsedData.rounds || [];
-            renderPlayers();
-            updateUI(); // Will re-render rounds and table
-        } else {
-            // First time opening the app
-            renderPlayers();
-            addRound(); 
-        }
+        let saved = JSON.parse(localStorage.getItem('mahjongLedgerData'));
+        if (saved) { players = saved.players; rounds = saved.rounds; historicalScores = saved.historicalScores; renderPlayers(); updateUI(); }
+        else { historicalScores = [0,0,0,0]; renderPlayers(); addRound(); }
     }
-
     function resetGame() {
-        if (confirm("Are you sure you want to clear all scores and start a new game?")) {
+        if (confirm("確定要清除所有紀錄並重置到初始狀態嗎？")) {
             localStorage.removeItem('mahjongLedgerData');
-            players = ["老人", "乃哥", "魔魟", "提姆"];
-            rounds = [];
-            renderPlayers();
-            addRound();
+            players = ["老人", "乃哥", "魔虹", "提姆"]; rounds = []; historicalScores = [0, 0, 0, 0];
+            renderPlayers(); addRound(); updateUI();
         }
     }
-    // --------------------------------
+    
+    // --- 閉環方案專用功能 ---
+    function copySettlement() {
+        let text = "【日麻歷史總帳】\n";
+        for(let i=0; i<players.length; i++) {
+            let sessionVal = currentGrandTotals[i] || 0;
+            let histScore = historicalScores[i] || 0;
+            if (rounds.some(r => r.some(s => s.p === i)) || sessionVal !== 0 || histScore !== 0) {
+                text += `${players[i]}: ${parseFloat((sessionVal + histScore).toFixed(1))}\n`;
+            }
+        }
+        navigator.clipboard.writeText(text).then(() => alert("✅ 已複製最新帳本！請直接貼上至群組。"));
+    }
+    function importHistory() {
+        let text = prompt("請貼上群組的歷史總帳文字：\n(格式如「老人: 150」或「乃哥: -20」)");
+        if(!text) return;
+        let lines = text.split('\n'), newPlayers = [], newHistory = [];
+        lines.forEach(line => {
+            let match = line.match(/^\s*(.*?)\s*[:：]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
+            if(match) { newPlayers.push(match[1].trim()); newHistory.push(parseFloat(match[2])); }
+        });
+        if(newPlayers.length > 0) {
+            players = newPlayers; historicalScores = newHistory; rounds = [];
+            addRound(); renderPlayers(); updateUI(); saveData();
+            alert(`✅ 成功載入 ${players.length} 位玩家的紀錄！`);
+        } else { alert("❌ 解析失敗，找不到相符的格式。"); }
+    }
+    // ----------------------
 
     function renderPlayers() {
-        const container = document.getElementById('playerNames');
-        container.innerHTML = '';
-        players.forEach((name, i) => {
-            container.innerHTML += `<input type="text" value="${name}" onchange="updatePlayerName(${i}, this.value)">`;
-        });
-        updateUI();
+        const c = document.getElementById('playerNames'); c.innerHTML = '';
+        players.forEach((n, i) => c.innerHTML += `<input type="text" value="${n}" onchange="updatePlayerName(${i}, this.value)">`);
     }
-
-    function addPlayer() {
-        if (players.length === 4) {
-            players.push("狗德");
-        } else {
-            players.push(`玩家 ${players.length + 1}`);
-        }
-        renderPlayers();
-        saveData();
-    }
-
-    function updatePlayerName(index, newName) {
-        players[index] = newName;
-        updateUI();
-        saveData();
-    }
-
-    function addRound() {
-        let defaultPlayers = [0, 1, 2, 3].map(i => i < players.length ? i : 0);
-        rounds.push([
-            {p: defaultPlayers[0], s: 25000}, 
-            {p: defaultPlayers[1], s: 25000}, 
-            {p: defaultPlayers[2], s: 25000}, 
-            {p: defaultPlayers[3], s: 25000}
-        ]);
-        updateUI();
-        saveData();
-    }
-
-    function updateSlotPlayer(roundIndex, slotIndex, playerIndex) {
-        rounds[roundIndex][slotIndex].p = parseInt(playerIndex);
-        updateUI();
-        saveData();
-    }
-
-    function updateSlotScore(roundIndex, slotIndex, value) {
-        rounds[roundIndex][slotIndex].s = parseInt(value) || 0;
-        updateUI();
-        saveData();
-    }
+    function addPlayer() { players.push(players.length === 4 ? "狗德" : `玩家 ${players.length + 1}`); historicalScores.push(0); renderPlayers(); saveData(); }
+    function updatePlayerName(i, n) { players[i] = n; updateUI(); saveData(); }
+    function addRound() { rounds.push([0,1,2,3].map(i => ({p: i<players.length?i:0, s: 25000}))); updateUI(); saveData(); }
+    function updateSlotPlayer(r, s, p) { rounds[r][s].p = parseInt(p); updateUI(); saveData(); }
+    function updateSlotScore(r, s, v) { rounds[r][s].s = parseInt(v) || 0; updateUI(); saveData(); }
+    function toggleSign(r, s) { rounds[r][s].s *= -1; updateUI(); saveData(); }
+    function updateHistoryScore(i, v) { historicalScores[i] = parseFloat(v) || 0; updateUI(); saveData(); }
+    function toggleHistorySign(i) { historicalScores[i] = (historicalScores[i] || 0) * -1; updateUI(); saveData(); }
 
     function calculateRoundCashouts(roundData) {
-        let sorted = [...roundData].sort((a, b) => b.s - a.s);
-        let cashouts = {};
-
-        let i = 0;
+        let sorted = [...roundData].sort((a, b) => b.s - a.s), cashouts = {}, i = 0;
         while (i < 4) {
-            let j = i;
-            while (j < 4 && sorted[j].s === sorted[i].s) j++;
-            
-            let tieCount = j - i;
-            let sumBonus = 0;
-            for (let k = i; k < j; k++) sumBonus += BONUSES[k];
-            let avgBonus = sumBonus / tieCount;
-
-            for (let k = i; k < j; k++) {
-                let basePoints = (sorted[k].s - BASE_SCORE) / DIVISOR;
-                cashouts[sorted[k].p] = basePoints + avgBonus;
-            }
+            let j = i; while (j < 4 && sorted[j].s === sorted[i].s) j++;
+            let sumB = 0; for(let k=i; k<j; k++) sumB += BONUSES[k]; let avgB = sumB / (j-i);
+            for(let k=i; k<j; k++) cashouts[sorted[k].p] = ((sorted[k].s - BASE_SCORE) / DIVISOR) + avgB;
             i = j;
         }
         return cashouts; 
     }
 
     function updateUI() {
-        const roundsList = document.getElementById('roundsList');
-        roundsList.innerHTML = '';
-        
-        let grandTotals = new Array(players.length).fill(0);
-
-        rounds.forEach((roundData, roundIndex) => {
-            let sum = roundData.reduce((acc, curr) => acc + curr.s, 0);
-            let activePlayers = new Set(roundData.map(r => r.p));
-            
-            let isSumValid = sum === 100000;
-            let isPlayersValid = activePlayers.size === 4;
-            let isValid = isSumValid && isPlayersValid;
-            
-            let statusText = '';
-            if (isValid) {
-                statusText = `<span class="valid">Sum: 100,000 ✓</span>`;
-                let roundCashouts = calculateRoundCashouts(roundData);
-                for(let pIndex in roundCashouts) {
-                    grandTotals[pIndex] += roundCashouts[pIndex];
-                }
-            } else if (!isPlayersValid) {
-                statusText = `<span class="warning">⚠ Duplicate Players</span>`;
-            } else {
-                statusText = `<span class="warning">Sum: ${sum} ⚠</span>`;
-            }
-
-            let slotsHtml = roundData.map((slotData, slotIndex) => {
-                let optionsHtml = players.map((name, i) => 
-                    `<option value="${i}" ${slotData.p === i ? 'selected' : ''}>${name}</option>`
-                ).join('');
-                
-                return `
-                    <div class="flex-row">
-                        <select onchange="updateSlotPlayer(${roundIndex}, ${slotIndex}, this.value)">
-                            ${optionsHtml}
-                        </select>
-                        <input type="number" step="100" inputmode="numeric" value="${slotData.s}" 
-                            onchange="updateSlotScore(${roundIndex}, ${slotIndex}, this.value)">
-                    </div>
-                `;
-            }).join('');
-
-            let roundHtml = `
-                <div class="round">
-                    <div class="round-header">
-                        <span>Round ${roundIndex + 1}</span>
-                        ${statusText}
-                    </div>
-                    <div>${slotsHtml}</div>
-                </div>
-            `;
-            roundsList.innerHTML += roundHtml;
+        document.getElementById('roundsList').innerHTML = '';
+        currentGrandTotals = new Array(players.length).fill(0);
+        rounds.forEach((rd, rIdx) => {
+            let sum = rd.reduce((a, c) => a + c.s, 0), isValid = sum === 100000 && new Set(rd.map(r=>r.p)).size === 4;
+            let status = isValid ? `<span class="valid">Sum: 100k ✓</span>` : (sum===100000 ? `<span class="warning">⚠ 重複</span>` : `<span class="warning">Sum: ${sum} ⚠</span>`);
+            if(isValid) { let cOuts = calculateRoundCashouts(rd); for(let p in cOuts) currentGrandTotals[p] += cOuts[p]; }
+            let slots = rd.map((s, sIdx) => `
+                <div class="flex-row">
+                    <select onchange="updateSlotPlayer(${rIdx}, ${sIdx}, this.value)">${players.map((n, i) => `<option value="${i}" ${s.p===i?'selected':''}>${n}</option>`).join('')}</select>
+                    <div class="input-container"><button class="btn-sign" onclick="toggleSign(${rIdx}, ${sIdx})">±</button><input type="number" step="100" value="${s.s}" onchange="updateSlotScore(${rIdx}, ${sIdx}, this.value)"></div>
+                </div>`).join('');
+            document.getElementById('roundsList').innerHTML += `<div class="round"><div class="round-header"><span>場次 ${rIdx + 1}</span>${status}</div><div>${slots}</div></div>`;
         });
 
-        const tbody = document.getElementById('settlementBody');
-        tbody.innerHTML = '';
-
+        document.getElementById('settlementBody').innerHTML = '';
+        document.getElementById('historyBody').innerHTML = '';
         for (let i = 0; i < players.length; i++) {
-            let val = grandTotals[i];
-            let participated = rounds.some(r => r.some(slot => slot.p === i));
-            
-            if (participated || val !== 0) {
-                let colorClass = val > 0 ? 'positive' : (val < 0 ? 'negative' : '');
-                let sign = val > 0 ? '+' : '';
-                
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="font-weight: bold;">${players[i]}</td>
-                        <td class="total-row ${colorClass}">${sign}${val.toFixed(1)}</td>
-                    </tr>
-                `;
+            let sVal = currentGrandTotals[i], hVal = historicalScores[i] || 0, part = rounds.some(r => r.some(s => s.p === i));
+            if (part || sVal !== 0) document.getElementById('settlementBody').innerHTML += `<tr><td style="font-weight: bold;">${players[i]}</td><td class="total-row ${sVal>0?'positive':sVal<0?'negative':''}">${sVal>0?'+':''}${sVal.toFixed(1)}</td></tr>`;
+            if (part || sVal !== 0 || hVal !== 0) {
+                let fBal = sVal + hVal;
+                document.getElementById('historyBody').innerHTML += `<tr><td style="font-weight:bold;vertical-align:middle;">${players[i]}</td><td><div class="input-container" style="justify-content:center;"><button class="btn-sign" onclick="toggleHistorySign(${i})">±</button><input type="number" step="0.1" value="${hVal}" onchange="updateHistoryScore(${i}, this.value)" style="min-width:0;"></div></td><td class="total-row ${fBal>0?'positive':fBal<0?'negative':''}" style="vertical-align:middle;">${fBal>0?'+':''}${fBal.toFixed(1)}</td></tr>`;
             }
         }
-        
-        // Save state at the end of every UI update
         saveData();
     }
-
-    // Initialize app by loading from storage
     loadData();
 </script>
-
 </body>
 </html>
